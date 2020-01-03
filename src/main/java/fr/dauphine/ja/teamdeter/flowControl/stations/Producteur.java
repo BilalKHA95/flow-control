@@ -16,11 +16,12 @@ public class Producteur extends Station {
 	private int m_nbMess;
 	private int m_nbAut;
 	private int m_successeur;
+	private int m_idMaster;
 	private boolean isEnabled;
 	private ProducteurWorker m_myWorker;
 	private ProducteurPostMan m_myPostMan;
 
-	public Producteur(int tailleTampon, int successeur) {
+	public Producteur(int tailleTampon, int successeur, int idMaster) {
 		this.m_in = 0;
 		this.m_out = 0;
 		this.m_nbAut = 0;
@@ -28,6 +29,9 @@ public class Producteur extends Station {
 		this.m_successeur = successeur;
 		m_tampon = new ApplicatifMessage[tailleTampon];
 		this.isEnabled = true;
+		this.m_idMaster = idMaster;
+		new Thread(m_myPostMan).run();
+		
 	}
 
 	public void run() {
@@ -38,12 +42,14 @@ public class Producteur extends Station {
 				Token myToken = null;
 				try {
 					myToken = (Token) in.readObject();
+
 				} catch (ClassNotFoundException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 				int j = myToken.getEmit();
 				synchronized (m_monitorReceipt) {
+					clt.close();
 					this.sur_reception_de(j, myToken);
 				}
 			} catch (IOException e) {
@@ -54,33 +60,48 @@ public class Producteur extends Station {
 	}
 
 	class ProducteurWorker implements Runnable {
-		
-		private String m_message ; 
-		private int m_id ; 
-		
-		public ProducteurWorker(String message , int id ) {
-			this.m_message = message ; 
-			this.m_id = id ; 
-		}
+		private ApplicatifMessage m_message;
+
+		public ProducteurWorker(ApplicatifMessage message) {
+			this.m_message = message;
+}
+
 		public void run() {
 			synchronized (m_monitorReceipt) {
-				
-					while (!(m_nbMess < m_tampon.length)) {
-						try {
-							m_monitorReceipt.wait();
-						} catch (InterruptedException e) {
-							e.printStackTrace();
-						}}
-					m_tampon[m_in] = new ApplicatifMessage(this.m_id,this.m_message); 
-					m_nbMess++ ;
-				
-				
+				while (!(m_nbMess < m_tampon.length)) {
+					try {
+						m_monitorReceipt.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				m_tampon[m_in] = this.m_message;
+				m_in = (m_in + 1) % m_tampon.length;
+				m_nbMess++;
+				m_monitorReceipt.notifyAll();
+
 			}
 		}
 	}
 
 	class ProducteurPostMan implements Runnable {
 		public void run() {
+			while (isEnabled) {
+				synchronized (m_monitorReceipt) {
+					while (!(m_nbAut > 0)) {
+						try {
+							m_monitorReceipt.wait();
+						} catch (InterruptedException e) {
+							e.printStackTrace();
+						}
+					}
+					//envoyer_a(m_idMaster, m_tampon[m_out]);
+					m_out = (m_out + 1) % m_tampon.length;
+					m_nbAut--;
+					m_nbMess--;
+					m_monitorReceipt.notifyAll();
+				}
+			}
 		}
 	}
 
@@ -93,7 +114,18 @@ public class Producteur extends Station {
 		}
 		m_nbAut += temp;
 		a.setVal(a.getVal() - temp);
+		a.setEmit(super.getId());
 		this.envoyer_a(m_successeur, a);
-		m_myPostMan.notify();
+		System.out.println("Hello") ; 
+		m_monitorReceipt.notifyAll();
+
 	}
+
+
+	public void produire(ApplicatifMessage m) {
+		new Thread(new ProducteurWorker(m)).run();
+	}
+
+
+
 }

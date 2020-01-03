@@ -3,13 +3,14 @@ package fr.dauphine.ja.teamdeter.flowControl.stations;
 import java.io.IOException;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
 
 public abstract class Station implements Runnable {
-	private int nbStation = 0;
+	private static int  nbStation = 0;
 	public static HashMap<Integer, InetSocketAddress> m_localDnsById = new HashMap<Integer, InetSocketAddress>();
 	public static HashMap<InetSocketAddress, Integer> m_localDnsByIdReverse = new HashMap<InetSocketAddress, Integer>();
 	private int m_id;
@@ -19,10 +20,11 @@ public abstract class Station implements Runnable {
 		this.m_id = nbStation;
 		for (int i = m_id; i <= 65535; i++) {
 			try {
-				this.m_mySocket = new ServerSocket(i);
-				InetSocketAddress addr = new InetSocketAddress(this.m_mySocket.getInetAddress(), this.m_mySocket.getLocalPort()) ; 
-				Station.m_localDnsById.put(m_id,addr);
-				m_localDnsByIdReverse.put(addr,m_id) ; 
+				this.m_mySocket = new ServerSocket(i, 100, InetAddress.getLocalHost());
+				InetSocketAddress addr = new InetSocketAddress(this.m_mySocket.getInetAddress(),
+						this.m_mySocket.getLocalPort());
+				Station.m_localDnsById.put(m_id, addr);
+				m_localDnsByIdReverse.put(addr, m_id);
 				break;
 			} catch (IOException e) {
 				System.out.println("Station id:" + this.m_id + " can't use port :" + i);
@@ -32,10 +34,11 @@ public abstract class Station implements Runnable {
 	}
 
 	public boolean envoyer_a(int j, Object envoi) {
+		
+		
 		InetSocketAddress receipterAdress = Station.m_localDnsById.get(j);
-		Socket receiver = new Socket();
 		try {
-			receiver.bind(receipterAdress);
+			Socket receiver = new Socket(receipterAdress.getHostName(), receipterAdress.getPort());
 			ObjectOutputStream out = new ObjectOutputStream(receiver.getOutputStream());
 			if (envoi instanceof Serializable) {
 				out.writeObject(envoi);
@@ -43,6 +46,7 @@ public abstract class Station implements Runnable {
 				return true;
 			} else {
 				System.out.println(envoi + " can't be send not a serializable Object");
+				receiver.close();
 				return false;
 			}
 		} catch (IOException e) {
@@ -52,7 +56,7 @@ public abstract class Station implements Runnable {
 		}
 	}
 
-public int getId() {
-	return this.m_id ; 
-}
+	public int getId() {
+		return this.m_id;
+	}
 }
