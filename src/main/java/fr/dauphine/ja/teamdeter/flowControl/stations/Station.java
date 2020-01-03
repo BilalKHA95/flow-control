@@ -9,7 +9,6 @@ import java.net.Socket;
 import java.util.HashMap;
 
 public abstract class Station implements Runnable {
-	private final Object m_monitorReceipt = new Object();
 	private int nbStation = 0;
 	private static HashMap<Integer, InetSocketAddress> m_localDnsById = new HashMap<Integer, InetSocketAddress>();
 	private static HashMap<InetSocketAddress, Integer> m_localDnsByIdReverse = new HashMap<InetSocketAddress, Integer>();
