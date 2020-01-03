@@ -1,4 +1,4 @@
-package fr.dauphine.ja.teamdeter.flowControl;
+package fr.dauphine.ja.teamdeter.flowControl.message;
 
 import java.io.Serializable;
 

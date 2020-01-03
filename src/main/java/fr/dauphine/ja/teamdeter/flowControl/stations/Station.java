@@ -1,4 +1,4 @@
-package fr.dauphine.ja.teamdeter.flowControl;
+package fr.dauphine.ja.teamdeter.flowControl.stations;
 
 import java.io.IOException;
 import java.io.ObjectOutputStream;
