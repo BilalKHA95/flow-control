@@ -10,4 +10,12 @@ public class Producteur extends Station {
 		public void run() {
 		}
 	}
+	class ProducteurPostMan implements Runnable{
+
+		public void run() {
+			
+			
+		}
+		
+	}
 }
