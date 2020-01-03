@@ -30,28 +30,14 @@ public class Producteur extends Station {
 		m_tampon = new ApplicatifMessage[tailleTampon];
 		this.isEnabled = true;
 		this.m_idMaster = idMaster;
-		new Thread(m_myPostMan).run();
-		
+		// new Thread(m_myPostMan).run();
 	}
 
 	public void run() {
 		while (isEnabled) {
 			try {
 				Socket clt = this.m_mySocket.accept();
-				ObjectInputStream in = new ObjectInputStream(clt.getInputStream());
-				Token myToken = null;
-				try {
-					myToken = (Token) in.readObject();
-
-				} catch (ClassNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				int j = myToken.getEmit();
-				synchronized (m_monitorReceipt) {
-					clt.close();
-					this.sur_reception_de(j, myToken);
-				}
+				new Thread(new ProducteurListenner(clt)).start();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -64,7 +50,7 @@ public class Producteur extends Station {
 
 		public ProducteurWorker(ApplicatifMessage message) {
 			this.m_message = message;
-}
+		}
 
 		public void run() {
 			synchronized (m_monitorReceipt) {
@@ -79,7 +65,6 @@ public class Producteur extends Station {
 				m_in = (m_in + 1) % m_tampon.length;
 				m_nbMess++;
 				m_monitorReceipt.notifyAll();
-
 			}
 		}
 	}
@@ -90,17 +75,45 @@ public class Producteur extends Station {
 				synchronized (m_monitorReceipt) {
 					while (!(m_nbAut > 0)) {
 						try {
-							m_monitorReceipt.wait();
+							this.wait();
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
 					}
-					//envoyer_a(m_idMaster, m_tampon[m_out]);
+					// envoyer_a(m_idMaster, m_tampon[m_out]);
 					m_out = (m_out + 1) % m_tampon.length;
 					m_nbAut--;
 					m_nbMess--;
 					m_monitorReceipt.notifyAll();
 				}
+			}
+		}
+	}
+
+	class ProducteurListenner implements Runnable {
+		private Socket m_myClient;
+
+		public ProducteurListenner(Socket s) {
+			this.m_myClient = s;
+		}
+
+		public void run() {
+			ObjectInputStream in;
+			try {
+				Token myToken = null;
+				in = new ObjectInputStream(this.m_myClient.getInputStream());
+				try {
+					myToken = (Token) in.readObject();
+				} catch (ClassNotFoundException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				int j = myToken.getEmit();
+				sur_reception_de(j, myToken);
+				this.m_myClient.close();
+			} catch (IOException e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
 			}
 		}
 	}
@@ -115,17 +128,11 @@ public class Producteur extends Station {
 		m_nbAut += temp;
 		a.setVal(a.getVal() - temp);
 		a.setEmit(super.getId());
-		this.envoyer_a(m_successeur, a);
-		System.out.println("Hello") ; 
-		m_monitorReceipt.notifyAll();
-
+		this.envoyer_a(j, a);
+		System.out.println("Hello");
 	}
-
 
 	public void produire(ApplicatifMessage m) {
-		new Thread(new ProducteurWorker(m)).run();
+		// new Thread(new ProducteurWorker(m)).run();
 	}
-
-
-
 }
