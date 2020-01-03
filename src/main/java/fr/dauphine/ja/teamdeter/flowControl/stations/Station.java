@@ -10,8 +10,8 @@ import java.util.HashMap;
 
 public abstract class Station implements Runnable {
 	private int nbStation = 0;
-	private static HashMap<Integer, InetSocketAddress> m_localDnsById = new HashMap<Integer, InetSocketAddress>();
-	private static HashMap<InetSocketAddress, Integer> m_localDnsByIdReverse = new HashMap<InetSocketAddress, Integer>();
+	public static HashMap<Integer, InetSocketAddress> m_localDnsById = new HashMap<Integer, InetSocketAddress>();
+	public static HashMap<InetSocketAddress, Integer> m_localDnsByIdReverse = new HashMap<InetSocketAddress, Integer>();
 	private int m_id;
 	protected ServerSocket m_mySocket;
 
@@ -52,5 +52,7 @@ public abstract class Station implements Runnable {
 		}
 	}
 
-
+public int getId() {
+	return this.m_id ; 
+}
 }

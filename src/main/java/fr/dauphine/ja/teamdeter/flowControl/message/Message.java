@@ -12,4 +12,7 @@ public abstract class Message implements Serializable {
 	public void setEmit(int emit) {
 		this.id_emetteur = emit;
 	}
+	public int getEmit() {
+		return this.id_emetteur ; 
+	}
 }
