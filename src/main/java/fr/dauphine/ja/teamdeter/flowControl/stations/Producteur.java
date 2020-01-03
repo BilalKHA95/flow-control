@@ -9,7 +9,8 @@ import fr.dauphine.ja.teamdeter.flowControl.message.Message;
 import fr.dauphine.ja.teamdeter.flowControl.message.Token;
 
 public class Producteur extends Station {
-	private final Object m_monitorReceipt = new Object();
+	private final Object m_editAutorisation = new Object();
+	private final Object m_editTampon = new Object();
 	private ApplicatifMessage[] m_tampon;
 	private int m_in;
 	private int m_out;
@@ -18,8 +19,7 @@ public class Producteur extends Station {
 	private int m_successeur;
 	private int m_idMaster;
 	private boolean isEnabled;
-	private ProducteurWorker m_myWorker;
-	private ProducteurPostMan m_myPostMan;
+	private static long  m_timeOut = 100 ; 
 
 	public Producteur(int tailleTampon, int successeur, int idMaster) {
 		this.m_in = 0;
@@ -30,13 +30,13 @@ public class Producteur extends Station {
 		m_tampon = new ApplicatifMessage[tailleTampon];
 		this.isEnabled = true;
 		this.m_idMaster = idMaster;
-		// new Thread(m_myPostMan).run();
+		new Thread(new ProducteurPostMan()).start();
 	}
 
 	public void run() {
 		while (isEnabled) {
 			try {
-				Socket clt = this.m_mySocket.accept();
+				Socket clt = this.m_mySocket.accept() ; 
 				new Thread(new ProducteurListenner(clt)).start();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
@@ -53,10 +53,10 @@ public class Producteur extends Station {
 		}
 
 		public void run() {
-			synchronized (m_monitorReceipt) {
+			synchronized (m_editTampon) {
 				while (!(m_nbMess < m_tampon.length)) {
 					try {
-						m_monitorReceipt.wait();
+						m_editTampon.wait();
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
@@ -64,7 +64,6 @@ public class Producteur extends Station {
 				m_tampon[m_in] = this.m_message;
 				m_in = (m_in + 1) % m_tampon.length;
 				m_nbMess++;
-				m_monitorReceipt.notifyAll();
 			}
 		}
 	}
@@ -72,20 +71,23 @@ public class Producteur extends Station {
 	class ProducteurPostMan implements Runnable {
 		public void run() {
 			while (isEnabled) {
-				synchronized (m_monitorReceipt) {
+				synchronized (m_editAutorisation) {
 					while (!(m_nbAut > 0)) {
 						try {
-							this.wait();
+							m_editAutorisation.wait();
 						} catch (InterruptedException e) {
 							e.printStackTrace();
 						}
 					}
-					// envoyer_a(m_idMaster, m_tampon[m_out]);
-					m_out = (m_out + 1) % m_tampon.length;
 					m_nbAut--;
-					m_nbMess--;
-					m_monitorReceipt.notifyAll();
+					synchronized (m_editTampon) {
+						m_out = (m_out + 1) % m_tampon.length;
+						m_nbMess--;
+						m_editTampon.notifyAll();
+					}
+					// envoyer_a(m_idMaster, m_tampon[m_out]);
 				}
+				
 			}
 		}
 	}
@@ -98,41 +100,58 @@ public class Producteur extends Station {
 		}
 
 		public void run() {
-			ObjectInputStream in;
+			ObjectInputStream in = null;
+			Token myToken = null;
 			try {
-				Token myToken = null;
 				in = new ObjectInputStream(this.m_myClient.getInputStream());
-				try {
-					myToken = (Token) in.readObject();
-				} catch (ClassNotFoundException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}
-				int j = myToken.getEmit();
-				sur_reception_de(j, myToken);
-				this.m_myClient.close();
 			} catch (IOException e1) {
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
+			}
+			try {
+				try {
+					myToken = (Token) in.readObject();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			} catch (ClassNotFoundException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+			synchronized (m_editAutorisation) {
+				int j = myToken.getEmit();
+				sur_reception_de(j, myToken);
+				m_editAutorisation.notifyAll();
 			}
 		}
 	}
 
 	public void sur_reception_de(int j, Token a) {
 		int temp;
-		if (m_nbMess - m_nbAut > a.getVal()) {
-			temp = a.getVal();
-		} else {
-			temp = m_nbMess - m_nbAut;
+		synchronized (m_editTampon) {
+			if (m_nbMess - m_nbAut > a.getVal()) {
+				temp = a.getVal();
+			} else {
+				temp = m_nbMess - m_nbAut;
+			}
+			m_editTampon.notifyAll();
 		}
 		m_nbAut += temp;
 		a.setVal(a.getVal() - temp);
 		a.setEmit(super.getId());
+		try {
+			Thread.sleep(Producteur.m_timeOut);
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		this.envoyer_a(j, a);
-		System.out.println("Hello");
 	}
 
 	public void produire(ApplicatifMessage m) {
-		// new Thread(new ProducteurWorker(m)).run();
+		new Thread(new ProducteurWorker(m)).run();
 	}
+
+
 }

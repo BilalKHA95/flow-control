@@ -7,6 +7,10 @@ public class ApplicatifMessage extends Message {
 		super(emit);
 		this.m_value = value;
 	}
+	@Override
+	public String toString() {
+		return this.m_value ; 
+	}
 
 	private static final long serialVersionUID = -4173362345380560910L;
 }
