@@ -19,7 +19,7 @@ public class MasterT extends Station {
 	private int m_out;
 	private int m_successeur;
 	private boolean isEnabled;
-	private static long m_timeOut = 50;
+	private static long m_timeOut = 100;
 	private final Object m_editToken = new Object();
 	private final Object m_editTampon = new Object();
 	private ArrayList<Integer> m_possibleMeeting;
@@ -42,6 +42,7 @@ public class MasterT extends Station {
 		this.m_possibleMeeting = meet;
 		this.m_myState = State.sleep;
 		this.m_lateStation = super.getId();
+		this.m_present = true;
 		m_canSendRequest = new Boolean[meet.size()];
 		for (int i = 0; i < meet.size(); i++) {
 			m_canSendRequest[i] = meet.get(i) < super.getId();
@@ -53,6 +54,7 @@ public class MasterT extends Station {
 		Token init = new Token(getId());
 		init.setVal(m_tampon.length);
 		envoyer_a(m_successeur, init);
+		this.m_present = false;
 		while (isEnabled) {
 			try {
 				Socket clt = this.m_mySocket.accept();
@@ -189,10 +191,11 @@ public class MasterT extends Station {
 
 	public void sur_reception_de(int j, Token a) {
 		synchronized (m_editToken) {
-			this.m_prochain = (j + 1) % (m_canSendRequest.length);
+			this.m_prochain = (j + 1) % (Main.nbProd);
 			this.m_nbcell += a.getVal();
 			if (this.m_nbcell > m_seuil) {
 				a.setVal(m_nbcell);
+				a.setEmit(getId());
 				this.envoyer_a(this.m_prochain, a);
 				this.m_nbcell = 0;
 			} else {
@@ -205,7 +208,7 @@ public class MasterT extends Station {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		this.envoyer_a(m_successeur, a);
+		//this.envoyer_a(m_successeur, a);
 	}
 
 	public void sur_reception_de(int j, ApplicatifMessage a) {

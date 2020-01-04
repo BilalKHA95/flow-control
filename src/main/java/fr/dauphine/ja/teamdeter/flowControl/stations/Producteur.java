@@ -21,7 +21,9 @@ public class Producteur extends Station {
 	private int m_idMaster;
 	private boolean isEnabled;
 	private static long  m_timeOut = Main.timeProcessProducteur ; 
-
+	private static long  m_timeOutJet = 200; 
+	private static final int m_seuil = 2 ;  
+	
 	public Producteur(int tailleTampon, int successeur, int idMaster) {
 		this.m_in = 0;
 		this.m_out = 0;
@@ -61,6 +63,12 @@ public class Producteur extends Station {
 					} catch (InterruptedException e) {
 						e.printStackTrace();
 					}
+				}
+				try {
+					Thread.sleep(Producteur.m_timeOut);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
 				}
 				m_tampon[m_in] = this.m_message;
 				m_in = (m_in + 1) % m_tampon.length;
@@ -151,16 +159,23 @@ public class Producteur extends Station {
 		a.setVal(a.getVal() - temp);
 		a.setEmit(super.getId());
 		try {
-			Thread.sleep(Producteur.m_timeOut);
+			Thread.sleep(Producteur.m_timeOutJet);
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		this.envoyer_a(m_successeur, a);
+		if(a.getVal()>m_seuil) {
+			this.envoyer_a(m_successeur, a);
+		}
+		else {
+			this.envoyer_a(m_idMaster, a);
+		}
+		
+		//this.envoyer_a(m_successeur, a);
 	}
 
 	public void produire(ApplicatifMessage m) {
-		new Thread(new ProducteurWorker(m)).run();
+		new Thread(new ProducteurWorker(m)).start();
 	}
 
 

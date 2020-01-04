@@ -11,11 +11,11 @@ import java.util.Random;
 import fr.dauphine.ja.teamdeter.flowControl.message.ApplicatifMessage;
 
 public class Main {
-	private static int nbProd = 10;
-	private static int nbCons = 5;
-	public static long timeProcessConsommateurs = 2000;
-	public static long timeProcessProducteur = 50;
-	private static int tTamponSize = 100;
+	public static int nbProd = 5;
+	private static int nbCons = 20;
+	public static long timeProcessConsommateurs = 1;
+	public static long timeProcessProducteur = 100;
+	private static int tTamponSize = 2;
 	private static int prodTampon = 5;
 	private static int consTampon = 2;
 	private static int nbMaxTache = 20;
