@@ -18,7 +18,7 @@ public class Consommateurs extends Station {
 	private int m_candidate;
 	private final Object m_editState = new Object();
 	private ApplicatifMessage[] m_tampon;
-	private int m_nbMess;// nbr mess stockés dans tampon pas encore envoyés à un consommateur
+	private int m_nbMess;// nbr mess stockï¿½s dans tampon pas encore envoyï¿½s ï¿½ un consommateur
 	private int m_in;
 	private int m_out;
 	private final Object m_editTampon = new Object();
@@ -105,7 +105,7 @@ public class Consommateurs extends Station {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
 					}
-					System.out.print(" " + m_tampon[m_out]);
+					System.out.print(m_tampon[m_out]+"("+getId() +")"+ " ");
 					m_out = (m_out + 1) % m_tampon.length;
 					m_nbMess--;
 					m_editTampon.notifyAll();

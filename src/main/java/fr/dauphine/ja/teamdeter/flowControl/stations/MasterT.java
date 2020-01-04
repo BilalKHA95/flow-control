@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.net.Socket;
 import java.util.ArrayList;
+import java.util.HashMap;
 
 import fr.dauphine.ja.teamdeter.flowControl.message.ApplicatifMessage;
 import fr.dauphine.ja.teamdeter.flowControl.message.Message;
@@ -13,8 +14,8 @@ import fr.dauphine.ja.teamdeter.flowControl.message.Token;
 
 public class MasterT extends Station {
 	private ApplicatifMessage[] m_tampon;
-	private int m_nbcell;// nbr de mess envoyés à un consommateur entre 2 passages du jeton
-	private int m_nbMess;// nbr mess stockés dans tampon pas encore envoyés à un consommateur
+	private int m_nbcell;// nbr de mess envoyï¿½s ï¿½ un consommateur entre 2 passages du jeton
+	private int m_nbMess;// nbr mess stockï¿½s dans tampon pas encore envoyï¿½s ï¿½ un consommateur
 	private int m_in;
 	private int m_out;
 	private int m_successeur;
@@ -208,16 +209,18 @@ public class MasterT extends Station {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		//this.envoyer_a(m_successeur, a);
+		// this.envoyer_a(m_successeur, a);
 	}
 
-	public void sur_reception_de(int j, ApplicatifMessage a) {
+	public void sur_reception_de(final int j, final ApplicatifMessage a) {
 		synchronized (m_editTampon) {
+
 			m_tampon[m_in] = a;
 			m_nbMess++;
-			m_in = (m_in + 1) % this.m_tampon.length;
+			m_in = (m_in + 1) % m_tampon.length;
 			m_editTampon.notifyAll();
 		}
+
 	}
 
 	public void sur_reception_de(int j, Requests a) {
@@ -280,4 +283,5 @@ public class MasterT extends Station {
 		}
 		return -1;
 	}
+
 }

@@ -18,26 +18,25 @@ public abstract class Station implements Runnable {
 
 	public Station() {
 		this.m_id = nbStation;
-		for (int i = m_id; i <= 65535; i++) {
-			try {
-				this.m_mySocket = new ServerSocket(i);
-				this.m_mySocket.setReuseAddress(true);
-				InetSocketAddress addr = new InetSocketAddress(InetAddress.getLocalHost(),
-						this.m_mySocket.getLocalPort());
-				Station.m_localDnsById.put(m_id, addr);
-				m_localDnsByIdReverse.put(addr, m_id);
-				break;
-			} catch (IOException e) {
-				System.out.println("Station id:" + this.m_id + " can't use port :" + i);
-			}
+
+		try {
+			this.m_mySocket = new ServerSocket(0);
+			this.m_mySocket.setReuseAddress(true);
+			InetSocketAddress addr = new InetSocketAddress(InetAddress.getLocalHost(), this.m_mySocket.getLocalPort());
+			Station.m_localDnsById.put(m_id, addr);
+			m_localDnsByIdReverse.put(addr, m_id);
+
+		} catch (IOException e) {
+			System.out.println("Station id:" + this.m_id + " can't use port");
 		}
+
 		nbStation++;
 	}
 
 	public boolean envoyer_a(int j, Object envoi) {
 		try {
 			Socket receiver = new Socket();
-			receiver.connect( Station.m_localDnsById.get(j));
+			receiver.connect(Station.m_localDnsById.get(j));
 			ObjectOutputStream out = new ObjectOutputStream(receiver.getOutputStream());
 			if (envoi instanceof Serializable) {
 				out.writeObject(envoi);

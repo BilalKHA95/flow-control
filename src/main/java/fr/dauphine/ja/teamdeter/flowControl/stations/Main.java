@@ -12,12 +12,12 @@ import fr.dauphine.ja.teamdeter.flowControl.message.ApplicatifMessage;
 
 public class Main {
 	public static int nbProd = 5;
-	private static int nbCons = 20;
-	public static long timeProcessConsommateurs = 1;
+	public static int nbCons = 5;
+	public static long timeProcessConsommateurs = 1000;
 	public static long timeProcessProducteur = 100;
-	private static int tTamponSize = 2;
+	private static int tTamponSize = 10;
 	private static int prodTampon = 5;
-	private static int consTampon = 2;
+	private static int consTampon = 10;
 	private static int nbMaxTache = 20;
 	private static long timeBetweenTaskLauncher = 10;
 
@@ -44,7 +44,7 @@ public class Main {
 		}
 		MasterT maestro = new MasterT(tTamponSize, 0, conso);
 		new Thread(maestro).start();
-		File file = new File("ressource\\test.txt");
+		File file = new File("ressource//test.txt");
 		try {
 			BufferedReader br = new BufferedReader(new FileReader(file));
 			String st;

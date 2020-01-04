@@ -23,12 +23,14 @@ public class Producteur extends Station {
 	private static long  m_timeOut = Main.timeProcessProducteur ; 
 	private static long  m_timeOutJet = 200; 
 	private static final int m_seuil = 2 ;  
+	private int m_connaissance ; 
 	
 	public Producteur(int tailleTampon, int successeur, int idMaster) {
 		this.m_in = 0;
 		this.m_out = 0;
 		this.m_nbAut = 0;
-		this.m_nbMess = 0;
+		this.m_nbMess = 0 ; 
+		this.m_connaissance = 0 ; 
 		this.m_successeur = successeur;
 		m_tampon = new ApplicatifMessage[tailleTampon];
 		this.isEnabled = true;
@@ -53,6 +55,8 @@ public class Producteur extends Station {
 
 		public ProducteurWorker(ApplicatifMessage message) {
 			this.m_message = message;
+			this.m_message.setConnaissance(m_connaissance);
+			m_connaissance++; 
 		}
 
 		public void run() {
@@ -175,7 +179,7 @@ public class Producteur extends Station {
 	}
 
 	public void produire(ApplicatifMessage m) {
-		new Thread(new ProducteurWorker(m)).start();
+		new Thread(new ProducteurWorker(m)).run();
 	}
 
 
