@@ -6,6 +6,7 @@ import java.net.Socket;
 
 import fr.dauphine.ja.teamdeter.flowControl.message.ApplicatifMessage;
 import fr.dauphine.ja.teamdeter.flowControl.message.Message;
+import fr.dauphine.ja.teamdeter.flowControl.message.Requests;
 import fr.dauphine.ja.teamdeter.flowControl.message.Token;
 
 public class Producteur extends Station {
@@ -101,7 +102,7 @@ public class Producteur extends Station {
 
 		public void run() {
 			ObjectInputStream in = null;
-			Token myToken = null;
+			Message myToken = null;
 			try {
 				in = new ObjectInputStream(this.m_myClient.getInputStream());
 			} catch (IOException e1) {
@@ -110,7 +111,16 @@ public class Producteur extends Station {
 			}
 			try {
 				try {
-					myToken = (Token) in.readObject();
+					myToken = (Message) in.readObject();
+					if(myToken instanceof Requests) {
+						myToken = (Token) in.readObject();
+						
+					}else {
+						myToken = (Token) myToken ; 
+						
+					}
+					
+					
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -121,7 +131,7 @@ public class Producteur extends Station {
 			}
 			synchronized (m_editAutorisation) {
 				int j = myToken.getEmit();
-				sur_reception_de(j, myToken);
+				sur_reception_de(j,(Token) myToken);
 				m_editAutorisation.notifyAll();
 			}
 		}
@@ -146,6 +156,7 @@ public class Producteur extends Station {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		System.out.println(a.getVal()) ; 
 		this.envoyer_a(m_successeur, a);
 	}
 

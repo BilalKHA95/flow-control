@@ -7,7 +7,8 @@ import java.util.ArrayList;
 
 import fr.dauphine.ja.teamdeter.flowControl.message.ApplicatifMessage;
 import fr.dauphine.ja.teamdeter.flowControl.message.Message;
-import fr.dauphine.ja.teamdeter.flowControl.message.Request;
+import fr.dauphine.ja.teamdeter.flowControl.message.RequestEnum;
+import fr.dauphine.ja.teamdeter.flowControl.message.Requests;
 import fr.dauphine.ja.teamdeter.flowControl.message.Token;
 
 public class MasterT extends Station {
@@ -42,6 +43,7 @@ public class MasterT extends Station {
 		for (int i = 0; i < meet.size(); i++) {
 			m_canSendRequest[i] = meet.get(i) < super.getId();
 		}
+		new Thread(new MasterTWorker()).start();
 	}
 
 	public void run() {
@@ -79,6 +81,8 @@ public class MasterT extends Station {
 						sur_reception_de(monmsg.getEmit(), (Token) monmsg);
 					} else if (monmsg instanceof ApplicatifMessage) {
 						sur_reception_de(monmsg.getEmit(), (ApplicatifMessage) monmsg);
+					} else if (monmsg instanceof Requests) {
+						sur_reception_de(monmsg.getEmit(), (Requests) monmsg);
 					}
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
@@ -116,8 +120,16 @@ public class MasterT extends Station {
 							}
 						}
 						if (m_myState == State.process) {
-							envoyer_a(m_candidate, Request.req);
-							m_canSendRequest[m_candidate] = false;
+							m_candidate = searchToken();
+							Requests maReq = new Requests(getId());
+							try {
+								Thread.sleep(m_timeOut);
+							} catch (InterruptedException e) {
+								// TODO Auto-generated catch block
+								e.printStackTrace();
+							}
+							envoyer_a(m_candidate, maReq);
+							m_canSendRequest[m_possibleMeeting.indexOf(m_candidate)] = false;
 							m_myState = State.waiting;
 							while (!(m_myState != State.waiting)) {
 								try {
@@ -128,27 +140,39 @@ public class MasterT extends Station {
 								}
 							}
 						}
-					} while (m_myState == State.success);
-					new Thread(new MasterTConsommateur(m_candidate)).start(); 
+					} while (! (m_myState == State.success));
+					new Thread(new MasterTConsommateur(m_candidate)).run();
 					m_myState = State.sleep;
+					m_editState.notifyAll();
+
 				}
-				m_editState.notifyAll();
 			}
 		}
 	}
 
 	class MasterTConsommateur implements Runnable {
-		private int m_j ; 
+		private int m_j;
+
 		public MasterTConsommateur(int j) {
-			this.m_j = j ; 
+			this.m_j = j;
 		}
+
 		public void run() {
 			synchronized (m_editTampon) {
-				envoyer_a(this.m_j ,m_tampon[m_out] ); 
+				try {
+					Thread.sleep(m_timeOut);
+				} catch (InterruptedException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				m_tampon[m_out].setEmit(getId());
+				envoyer_a(this.m_j, m_tampon[m_out]);
 				m_out = (m_out + 1) % m_tampon.length;
 				m_nbMess--;
 				m_nbcell++;
+				m_editTampon.notifyAll();
 			}
+			
 		}
 	}
 
@@ -163,6 +187,7 @@ public class MasterT extends Station {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		System.out.println(a.getVal());
 		this.envoyer_a(m_successeur, a);
 	}
 
@@ -171,16 +196,19 @@ public class MasterT extends Station {
 			m_tampon[m_in] = a;
 			m_nbMess++;
 			m_in = (m_in + 1) % this.m_tampon.length;
+			m_editTampon.notifyAll();
 		}
 	}
 
-	public void sur_reception_de(int j, Request a) {
+	public void sur_reception_de(int j, Requests a) {
 		synchronized (m_editState) {
-			switch (a) {
+			switch (a.getStatus()) {
 			case ack:
 				m_myState = State.success;
 				if (m_lateStation != getId()) {
-					envoyer_a(m_lateStation, Request.rej);
+					a.setStatus(RequestEnum.rej);
+					a.setEmit(super.getId());
+					envoyer_a(m_lateStation, a);
 					m_lateStation = getId();
 				}
 				break;
@@ -189,7 +217,9 @@ public class MasterT extends Station {
 					m_myState = State.process;
 				} else {
 					m_myState = State.success;
-					envoyer_a(m_lateStation, Request.ack);
+					a.setStatus(RequestEnum.ack);
+					a.setEmit(super.getId());
+					envoyer_a(m_lateStation, a);
 					m_candidate = m_lateStation;
 					m_lateStation = getId();
 				}
@@ -198,13 +228,19 @@ public class MasterT extends Station {
 				int index = m_possibleMeeting.indexOf(j);
 				m_canSendRequest[index] = true;
 				if (m_myState == State.sleep || m_possibleMeeting.indexOf(j) == -1) {
-					envoyer_a(j, Request.rej);
+					a.setStatus(RequestEnum.rej);
+					a.setEmit(super.getId());
+					envoyer_a(j, a);
 				} else if (m_myState == State.process) {
 					m_myState = State.success;
 					m_candidate = j;
-					envoyer_a(j, Request.ack);
+					a.setStatus(RequestEnum.ack);
+					a.setEmit(super.getId());
+					envoyer_a(j, a);
 				} else if (m_lateStation != getId() || j < getId()) {
-					envoyer_a(j, Request.rej);
+					a.setStatus(RequestEnum.rej);
+					a.setEmit(super.getId());
+					envoyer_a(j, a);
 				} else {
 					m_lateStation = j;
 				}
@@ -219,7 +255,7 @@ public class MasterT extends Station {
 	public int searchToken() {
 		for (int i = 0; i < m_canSendRequest.length; i++) {
 			if (m_canSendRequest[i]) {
-				return i;
+				return m_possibleMeeting.get(i);
 			}
 		}
 		return -1;
