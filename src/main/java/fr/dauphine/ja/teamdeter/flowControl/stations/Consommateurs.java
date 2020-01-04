@@ -24,7 +24,7 @@ public class Consommateurs extends Station {
 	private final Object m_editTampon = new Object();
 	private boolean isEnabled;
 	private boolean token;
-	private static long m_timeOut = 2000;
+	private static long m_timeOut = Main.timeProcessConsommateurs;
 	private int m_idMaster;
 
 	public Consommateurs(int tailleTampon, int successeur) {
@@ -99,6 +99,13 @@ public class Consommateurs extends Station {
 							e.printStackTrace();
 						}
 					}
+					try {
+						Thread.sleep(m_timeOut);
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+					System.out.print(" " + m_tampon[m_out]);
 					m_out = (m_out + 1) % m_tampon.length;
 					m_nbMess--;
 					m_editTampon.notifyAll();
@@ -134,12 +141,6 @@ public class Consommateurs extends Station {
 						if (m_myState == State.process) {
 							m_candidate = m_idMaster;
 							Requests maReq = new Requests(getId());
-							try {
-								Thread.sleep(m_timeOut);
-							} catch (InterruptedException e) {
-								// TODO Auto-generated catch block
-								e.printStackTrace();
-							}
 							envoyer_a(m_candidate, maReq);
 							token = false;
 							m_myState = State.waiting;

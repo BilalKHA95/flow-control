@@ -1,44 +1,80 @@
 package fr.dauphine.ja.teamdeter.flowControl.stations;
 
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Random;
 
 import fr.dauphine.ja.teamdeter.flowControl.message.ApplicatifMessage;
-import fr.dauphine.ja.teamdeter.flowControl.message.Token;
 
 public class Main {
+	private static int nbProd = 10;
+	private static int nbCons = 5;
+	public static long timeProcessConsommateurs = 2000;
+	public static long timeProcessProducteur = 50;
+	private static int tTamponSize = 100;
+	private static int prodTampon = 5;
+	private static int consTampon = 2;
+	private static int nbMaxTache = 20;
+	private static long timeBetweenTaskLauncher = 10;
+
 	public static void main(String[] args) {
-for(int i= 0 ; i < 500 ; i++) {
-			
+		java.util.Random mon_rand = new Random();
+		ArrayList<Integer> conso = new ArrayList<Integer>();
+		ArrayList<Producteur> prods = new ArrayList<Producteur>();
+		int idMaestro = nbProd + nbCons;
+		for (int i = 0; i < Main.nbProd; i++) {
+			if (i + 1 < Main.nbProd) {
+				Producteur a = new Producteur(prodTampon, i + 1, idMaestro);
+				prods.add(a);
+				new Thread(a).start();
+			} else {
+				Producteur a = new Producteur(prodTampon, idMaestro, idMaestro);
+				prods.add(a);
+				new Thread(a).start();
+			}
 		}
-		
-		Producteur t = new Producteur(5, 1, 2);
-		Producteur t2 = new Producteur(15, 2, 2);
-		ArrayList<Integer>aaaa = new ArrayList<Integer>() ; 
-		
-		
-		aaaa.add(3) ; 
-		aaaa.add(4);
-		MasterT maestro = new MasterT(10,0,aaaa ) ; 
-		Consommateurs tt = new Consommateurs(1,2) ; 
-		Consommateurs ttt = new Consommateurs(1,2) ; 
+		for (int i = 0; i < Main.nbCons; i++) {
+			Consommateurs a = new Consommateurs(consTampon, idMaestro);
+			new Thread(a).start();
+			conso.add(a.getId());
+		}
+		MasterT maestro = new MasterT(tTamponSize, 0, conso);
 		new Thread(maestro).start();
-		Thread aa = new Thread(t) ; 
-		Thread aaa = new Thread(t2);
-		Thread aaaaa = new Thread(tt);
-		Thread aaaaaa = new Thread(ttt);
-		aa.start();
-		aaa.start();
-		aaaaa.start();
-		aaaaaa.start();
-		Token t1 = new Token(2) ; 
-		t1.setVal(10);
-		maestro.envoyer_a(0, t1) ; 
-		for (int i = 0; i < 50000; i++) {
-			t.produire(new ApplicatifMessage(i, Integer.toString(i)));
+		File file = new File("ressource\\test.txt");
+		try {
+			BufferedReader br = new BufferedReader(new FileReader(file));
+			String st;
+			try {
+				while ((st = br.readLine()) != null) {
+					String[] tab = st.split(" ") ; 
+					for (String mot : tab) {
+						prods.get(0).produire(new ApplicatifMessage(prods.get(0).getId(), mot));
+						
+					}
+					System.out.println(); 
+
+					
+				
+				}
+			} catch (IOException e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
 		}
-		
-	
-		System.out.println(""); 
-		
+		/*
+		 * while (true) { int index = mon_rand.nextInt(prods.size()); int nbProd =
+		 * mon_rand.nextInt(nbMaxTache); for (int i = 0; i < nbProd; i++) {
+		 * prods.get(index).produire(new ApplicatifMessage(prods.get(index).getId(),
+		 * "test")); } try { Thread.sleep(timeBetweenTaskLauncher); } catch
+		 * (InterruptedException e) { // TODO Auto-generated catch block
+		 * e.printStackTrace(); } }
+		 */
 	}
 }

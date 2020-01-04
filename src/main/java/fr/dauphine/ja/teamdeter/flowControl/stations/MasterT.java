@@ -19,7 +19,7 @@ public class MasterT extends Station {
 	private int m_out;
 	private int m_successeur;
 	private boolean isEnabled;
-	private static long m_timeOut = 100;
+	private static long m_timeOut = 50;
 	private final Object m_editToken = new Object();
 	private final Object m_editTampon = new Object();
 	private ArrayList<Integer> m_possibleMeeting;
@@ -47,8 +47,12 @@ public class MasterT extends Station {
 	}
 
 	public void run() {
+		Token init = new Token(getId()) ; 
+		init.setVal(m_tampon.length);
+		envoyer_a(m_successeur,init);
 		while (isEnabled) {
 			try {
+				
 				Socket clt = this.m_mySocket.accept();
 				new Thread(new MasterTListenner(clt)).start();
 			} catch (IOException e) {
@@ -140,11 +144,10 @@ public class MasterT extends Station {
 								}
 							}
 						}
-					} while (! (m_myState == State.success));
+					} while (!(m_myState == State.success));
 					new Thread(new MasterTConsommateur(m_candidate)).run();
 					m_myState = State.sleep;
 					m_editState.notifyAll();
-
 				}
 			}
 		}
@@ -172,7 +175,6 @@ public class MasterT extends Station {
 				m_nbcell++;
 				m_editTampon.notifyAll();
 			}
-			
 		}
 	}
 
@@ -187,7 +189,6 @@ public class MasterT extends Station {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		System.out.println(a.getVal());
 		this.envoyer_a(m_successeur, a);
 	}
 

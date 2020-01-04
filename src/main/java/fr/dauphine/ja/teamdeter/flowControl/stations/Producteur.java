@@ -20,7 +20,7 @@ public class Producteur extends Station {
 	private int m_successeur;
 	private int m_idMaster;
 	private boolean isEnabled;
-	private static long  m_timeOut = 100 ; 
+	private static long  m_timeOut = Main.timeProcessProducteur ; 
 
 	public Producteur(int tailleTampon, int successeur, int idMaster) {
 		this.m_in = 0;
@@ -156,7 +156,6 @@ public class Producteur extends Station {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		System.out.println(a.getVal()) ; 
 		this.envoyer_a(m_successeur, a);
 	}
 
