@@ -81,11 +81,11 @@ public class Producteur extends Station {
 					}
 					m_nbAut--;
 					synchronized (m_editTampon) {
-						m_out = (m_out + 1) % m_tampon.length;
 						m_nbMess--;
 						m_editTampon.notifyAll();
 					}
-					// envoyer_a(m_idMaster, m_tampon[m_out]);
+					envoyer_a(m_idMaster, m_tampon[m_out]);
+					m_out = (m_out + 1) % m_tampon.length;
 				}
 				
 			}
@@ -146,7 +146,7 @@ public class Producteur extends Station {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		this.envoyer_a(j, a);
+		this.envoyer_a(m_successeur, a);
 	}
 
 	public void produire(ApplicatifMessage m) {

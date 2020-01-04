@@ -9,46 +9,27 @@ import fr.dauphine.ja.teamdeter.flowControl.message.ApplicatifMessage;
 import fr.dauphine.ja.teamdeter.flowControl.message.Message;
 import fr.dauphine.ja.teamdeter.flowControl.message.Request;
 import fr.dauphine.ja.teamdeter.flowControl.message.Token;
+import fr.dauphine.ja.teamdeter.flowControl.stations.MasterT.MasterTListenner;
 
-public class MasterT extends Station {
+public class Consommateurs extends Station {
+	private State m_myState;
+	private int m_lateStation;
+	private int m_candidate;
+	private final Object m_editState = new Object();
 	private ApplicatifMessage[] m_tampon;
-	private int m_nbcell;// nbr de mess envoyés à un consommateur entre 2 passages du jeton
 	private int m_nbMess;// nbr mess stockés dans tampon pas encore envoyés à un consommateur
 	private int m_in;
 	private int m_out;
-	private int m_successeur;
-	private boolean isEnabled;
-	private static long m_timeOut = 100;
-	private final Object m_editToken = new Object();
 	private final Object m_editTampon = new Object();
-	private ArrayList<Integer> m_possibleMeeting;
-	private State m_myState;
-	private int m_lateStation;
-	private Boolean[] m_canSendRequest;
-	private int m_candidate;
-	private final Object m_editState = new Object();
-
-	public MasterT(int tailleTampon, int successeur, ArrayList<Integer> meet) {
-		this.m_in = 0;
-		this.m_out = 0;
-		this.m_nbMess = 0;
-		this.m_successeur = successeur;
-		m_tampon = new ApplicatifMessage[tailleTampon];
-		this.isEnabled = true;
-		this.m_possibleMeeting = meet;
-		this.m_myState = State.sleep;
-		this.m_lateStation = super.getId();
-		m_canSendRequest = new Boolean[meet.size()];
-		for (int i = 0; i < meet.size(); i++) {
-			m_canSendRequest[i] = meet.get(i) < super.getId();
-		}
-	}
+	private boolean isEnabled;
+	private boolean token;
+	private int m_idMaster;
 
 	public void run() {
 		while (isEnabled) {
 			try {
 				Socket clt = this.m_mySocket.accept();
-				new Thread(new MasterTListenner(clt)).start();
+				new Thread(new ConsommateursListenner(clt)).start();
 			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -56,16 +37,16 @@ public class MasterT extends Station {
 		}
 	}
 
-	class MasterTListenner implements Runnable {
+	class ConsommateursListenner implements Runnable {
 		private Socket m_myClient;
 
-		public MasterTListenner(Socket s) {
+		public ConsommateursListenner(Socket s) {
 			this.m_myClient = s;
 		}
 
 		public void run() {
 			ObjectInputStream in = null;
-			Message monmsg = null;
+			ApplicatifMessage monmsg = null;
 			try {
 				in = new ObjectInputStream(this.m_myClient.getInputStream());
 			} catch (IOException e1) {
@@ -74,12 +55,9 @@ public class MasterT extends Station {
 			}
 			try {
 				try {
-					monmsg = (Message) in.readObject();
-					if (monmsg instanceof Token) {
-						sur_reception_de(monmsg.getEmit(), (Token) monmsg);
-					} else if (monmsg instanceof ApplicatifMessage) {
-						sur_reception_de(monmsg.getEmit(), (ApplicatifMessage) monmsg);
-					}
+					monmsg = (ApplicatifMessage) in.readObject();
+					sur_reception_de(monmsg.getEmit(),monmsg) ;
+					
 				} catch (IOException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
@@ -91,11 +69,34 @@ public class MasterT extends Station {
 		}
 	}
 
-	class MasterTWorker implements Runnable {
+	class ConsommateursWorker implements Runnable {
+		private ApplicatifMessage m_message;
+
+		public ConsommateursWorker(ApplicatifMessage message) {
+			this.m_message = message;
+		}
+
+		public void run() {
+			synchronized (m_editTampon) {
+				while (!(m_nbMess > 0)) {
+					try {
+						m_editTampon.wait();
+					} catch (InterruptedException e) {
+						e.printStackTrace();
+					}
+				}
+				System.out.println(m_tampon[m_out]);
+				m_out = (m_out + 1) % m_tampon.length;
+				m_nbMess--;
+			}
+		}
+	}
+
+	class ConsommateurRdvSeeker implements Runnable {
 		public void run() {
 			while (isEnabled) {
 				synchronized (m_editTampon) {
-					while (!(m_nbMess > 0)) {
+					while (!(m_nbMess < m_tampon.length)) {
 						try {
 							m_editTampon.wait();
 						} catch (InterruptedException e) {
@@ -107,7 +108,7 @@ public class MasterT extends Station {
 				synchronized (m_editState) {
 					do {
 						m_myState = State.process;
-						while (searchToken() == -1) {
+						while (!token) {
 							try {
 								m_editState.wait();
 							} catch (InterruptedException e) {
@@ -117,7 +118,7 @@ public class MasterT extends Station {
 						}
 						if (m_myState == State.process) {
 							envoyer_a(m_candidate, Request.req);
-							m_canSendRequest[m_candidate] = false;
+							token = false;
 							m_myState = State.waiting;
 							while (!(m_myState != State.waiting)) {
 								try {
@@ -129,48 +130,10 @@ public class MasterT extends Station {
 							}
 						}
 					} while (m_myState == State.success);
-					new Thread(new MasterTConsommateur(m_candidate)).start(); 
 					m_myState = State.sleep;
 				}
 				m_editState.notifyAll();
 			}
-		}
-	}
-
-	class MasterTConsommateur implements Runnable {
-		private int m_j ; 
-		public MasterTConsommateur(int j) {
-			this.m_j = j ; 
-		}
-		public void run() {
-			synchronized (m_editTampon) {
-				envoyer_a(this.m_j ,m_tampon[m_out] ); 
-				m_out = (m_out + 1) % m_tampon.length;
-				m_nbMess--;
-				m_nbcell++;
-			}
-		}
-	}
-
-	public void sur_reception_de(int j, Token a) {
-		synchronized (m_editToken) {
-			a.setVal(a.getVal() + this.m_nbcell);
-			this.m_nbcell = 0;
-		}
-		try {
-			Thread.sleep(MasterT.m_timeOut);
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		this.envoyer_a(m_successeur, a);
-	}
-
-	public void sur_reception_de(int j, ApplicatifMessage a) {
-		synchronized (m_editTampon) {
-			m_tampon[m_in] = a;
-			m_nbMess++;
-			m_in = (m_in + 1) % this.m_tampon.length;
 		}
 	}
 
@@ -195,9 +158,7 @@ public class MasterT extends Station {
 				}
 				break;
 			case req:
-				int index = m_possibleMeeting.indexOf(j);
-				m_canSendRequest[index] = true;
-				if (m_myState == State.sleep || m_possibleMeeting.indexOf(j) == -1) {
+				if (m_myState == State.sleep || j != m_idMaster) {
 					envoyer_a(j, Request.rej);
 				} else if (m_myState == State.process) {
 					m_myState = State.success;
@@ -212,16 +173,17 @@ public class MasterT extends Station {
 			default:
 				break;
 			}
-			m_editState.notifyAll();
 		}
 	}
 
-	public int searchToken() {
-		for (int i = 0; i < m_canSendRequest.length; i++) {
-			if (m_canSendRequest[i]) {
-				return i;
+	public void sur_reception_de(int j, ApplicatifMessage a) {
+		if (j == m_idMaster) {
+			synchronized (m_editTampon) {
+				m_tampon[m_in] = a;
+				m_nbMess++;
+				m_in = (m_in + 1) % this.m_tampon.length;
 			}
+			m_editTampon.notifyAll();
 		}
-		return -1;
 	}
 }
