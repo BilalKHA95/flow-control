@@ -1,0 +1,11 @@
+Tous les algorithmes de contrôle de flux vu en cours supposent que le tampon est géré par le site consommateur.
+ Il s’agit dans ce projet de mettre en place une implantation répartie d’un nouvel algorithme de contrôle de flux qui soit une généralisation du modèle producteur consommateur.
+dans lequel un site T est responsable de la gestion du tampon, p sites de production et k sites de consommation. Afin de résoudre le problème dû à l'asynchronisme des sites de production et des sites de consommation, 
+l'algorithme doit asservir les producteurs et les consommateurs des messages par des informations fournies par le site T. Pour cela, chaque site, producteur ou consommateur, communique avec le site T.
+L'algorithme consiste à faire circuler des autorisations de production entre les producteurs et le site T et des autorisations de consommation entre les consommateurs et le site T.
+Lorsqu'un producteur veut déposer un message dans le tampon, il appelle Produire(m).
+Lorsqu'un consommateur veut retirer un message du tampon, alors il appelle la primitive Consommer(). Un producteur qui souhaite produire un message enverra une demande de production au site T. 
+En réponse, le site T envoie soit une autorisation de production signifiant qu'au moins une place est libre dans le tampon soit un refus signifiant que le tampon est plein. Dans le 
+premier cas, le site producteur envoie le message produit à T. Un consommateur qui souhaite retirer un message enverra une demande de consommation au site T. 
+En réponse, le site T envoie un message si le tampon n'est pas vide ou un refus dans le cas contraire.
+Bien entendu, les consommateurs ne pourrons consommer que si le tampon n'est pas vide et les producteurs ne pourront produire que si le tampon n’est pas plein. On suppose que le site T gère le tampon de manière circulaire.
