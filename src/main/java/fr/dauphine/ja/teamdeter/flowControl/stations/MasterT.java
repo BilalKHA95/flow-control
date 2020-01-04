@@ -28,6 +28,9 @@ public class MasterT extends Station {
 	private Boolean[] m_canSendRequest;
 	private int m_candidate;
 	private final Object m_editState = new Object();
+	private boolean m_present;
+	private int m_prochain;
+	private final static int m_seuil = 5;
 
 	public MasterT(int tailleTampon, int successeur, ArrayList<Integer> meet) {
 		this.m_in = 0;
@@ -47,12 +50,11 @@ public class MasterT extends Station {
 	}
 
 	public void run() {
-		Token init = new Token(getId()) ; 
+		Token init = new Token(getId());
 		init.setVal(m_tampon.length);
-		envoyer_a(m_successeur,init);
+		envoyer_a(m_successeur, init);
 		while (isEnabled) {
 			try {
-				
 				Socket clt = this.m_mySocket.accept();
 				new Thread(new MasterTListenner(clt)).start();
 			} catch (IOException e) {
@@ -173,6 +175,13 @@ public class MasterT extends Station {
 				m_out = (m_out + 1) % m_tampon.length;
 				m_nbMess--;
 				m_nbcell++;
+				if (m_present && m_nbcell > m_seuil) {
+					Token token = new Token(getId());
+					token.setVal(m_nbcell);
+					envoyer_a(m_prochain, token);
+					m_nbcell = 0;
+					m_present = false;
+				}
 				m_editTampon.notifyAll();
 			}
 		}
@@ -180,8 +189,15 @@ public class MasterT extends Station {
 
 	public void sur_reception_de(int j, Token a) {
 		synchronized (m_editToken) {
-			a.setVal(a.getVal() + this.m_nbcell);
-			this.m_nbcell = 0;
+			this.m_prochain = (j + 1) % (m_canSendRequest.length);
+			this.m_nbcell += a.getVal();
+			if (this.m_nbcell > m_seuil) {
+				a.setVal(m_nbcell);
+				this.envoyer_a(this.m_prochain, a);
+				this.m_nbcell = 0;
+			} else {
+				this.m_present = true;
+			}
 		}
 		try {
 			Thread.sleep(MasterT.m_timeOut);
